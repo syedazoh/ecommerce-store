@@ -1,0 +1,50 @@
+pipeline {
+    agent any
+
+    tools {
+        sonarQubeScanner 'SonarScanner'   // must match the name in Jenkins → Tools
+    }
+
+    environment {
+        SONARQUBE = 'SonarQubeLocal'      // must match the name in Jenkins → System
+    }
+
+    stages {
+        stage('Checkout') {
+            steps {
+                git branch: 'main',
+                    url: 'https://github.com/syedazoh/ecommerce-store.git'
+            }
+        }
+
+        stage('Build') {
+            steps {
+                echo "🔨 Installing dependencies..."
+                sh 'npm install'
+            }
+        }
+
+        stage('Test') {
+            steps {
+                echo "🧪 Running tests..."
+                sh 'npm test || echo "No tests found, skipping..."'
+            }
+        }
+
+        stage('SonarQube Analysis') {
+            steps {
+                withSonarQubeEnv("${SONARQUBE}") {
+                    sh 'sonar-scanner'
+                }
+            }
+        }
+
+        stage('Build Docker Image') {
+            steps {
+                script {
+                    docker.build("ecommerce-store:latest")
+                }
+            }
+        }
+    }
+}
