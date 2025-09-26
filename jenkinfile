@@ -1,49 +1,45 @@
 pipeline {
     agent any
 
-    tools {
-        sonarQubeScanner 'SonarScanner'   // must match the name in Jenkins → Tools
+    environment {
+        // Must match the name you set under Manage Jenkins → System → SonarQube servers
+        SONARQUBE_SERVER = 'SonarQubeLocal'
     }
 
-    environment {
-        SONARQUBE = 'SonarQubeLocal'      // must match the name in Jenkins → System
+    tools {
+        nodejs 'nodejs'   // only if you added NodeJS tool in Jenkins (Manage Jenkins → Global Tool Configuration)
     }
 
     stages {
         stage('Checkout') {
             steps {
-                git branch: 'main',
-                    url: 'https://github.com/syedazoh/ecommerce-store.git'
+                git branch: 'master', url: 'https://github.com/syedazoh/ecommerce-store.git'
             }
         }
 
-        stage('Build') {
+        stage('Install Dependencies') {
             steps {
-                echo "🔨 Installing dependencies..."
                 sh 'npm install'
-            }
-        }
-
-        stage('Test') {
-            steps {
-                echo "🧪 Running tests..."
-                sh 'npm test || echo "No tests found, skipping..."'
             }
         }
 
         stage('SonarQube Analysis') {
             steps {
-                withSonarQubeEnv("${SONARQUBE}") {
-                    sh 'sonar-scanner'
+                withSonarQubeEnv("${SONARQUBE_SERVER}") {
+                    sh '''
+                        sonar-scanner \
+                          -Dsonar.projectKey=ecommerce-store \
+                          -Dsonar.sources=. \
+                          -Dsonar.host.url=http://localhost:9000 \
+                          -Dsonar.login=$SONAR_AUTH_TOKEN
+                    '''
                 }
             }
         }
 
         stage('Build Docker Image') {
             steps {
-                script {
-                    docker.build("ecommerce-store:latest")
-                }
+                sh 'docker build -t ecommerce-store .'
             }
         }
     }
