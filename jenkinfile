@@ -3,6 +3,7 @@ pipeline {
 
     tools {
         nodejs 'nodejs'
+        sonarQubeScanner 'sonar-scanner'   // <-- add this
     }
 
     environment {
@@ -49,4 +50,5 @@ pipeline {
         }
     }
 }
+
 
