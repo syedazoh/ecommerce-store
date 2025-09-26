@@ -1,13 +1,12 @@
 pipeline {
     agent any
 
-    environment {
-        // Must match the name you set under Manage Jenkins → System → SonarQube servers
-        SONARQUBE_SERVER = 'SonarQubeLocal'
+    tools {
+        nodejs 'nodejs'
     }
 
-    tools {
-        nodejs 'nodejs'   // only if you added NodeJS tool in Jenkins (Manage Jenkins → Global Tool Configuration)
+    environment {
+        SONARQUBE_SERVER = 'SonarQubeLocal'
     }
 
     stages {
@@ -19,28 +18,35 @@ pipeline {
 
         stage('Install Dependencies') {
             steps {
-                sh 'npm install'
+                dir('backend') {
+                    sh 'npm install'
+                }
             }
         }
 
         stage('SonarQube Analysis') {
             steps {
                 withSonarQubeEnv("${SONARQUBE_SERVER}") {
-                    sh '''
-                        sonar-scanner \
-                          -Dsonar.projectKey=ecommerce-store \
-                          -Dsonar.sources=. \
-                          -Dsonar.host.url=http://localhost:9000 \
-                          -Dsonar.login=$SONAR_AUTH_TOKEN
-                    '''
+                    dir('backend') {
+                        sh '''
+                            sonar-scanner \
+                              -Dsonar.projectKey=ecommerce-store \
+                              -Dsonar.sources=. \
+                              -Dsonar.host.url=http://localhost:9000 \
+                              -Dsonar.login=$SONAR_AUTH_TOKEN
+                        '''
+                    }
                 }
             }
         }
 
         stage('Build Docker Image') {
             steps {
-                sh 'docker build -t ecommerce-store .'
+                dir('backend') {
+                    sh 'docker build -t ecommerce-store-backend:latest .'
+                }
             }
         }
     }
 }
+
