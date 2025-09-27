@@ -3,7 +3,7 @@ agent any
 
 ```
 environment {
-    SONARQUBE_URL = 'http://localhost:9000'  // change if using Docker network
+    SONARQUBE_URL = 'http://localhost:9000'  // change if running in Docker network
 }
 
 stages {
@@ -46,5 +46,3 @@ stages {
 ```
 
 }
-
-
