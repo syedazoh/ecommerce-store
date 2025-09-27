@@ -2,12 +2,12 @@ pipeline {
     agent any
 
     tools {
-        nodejs 'nodejs'
+        nodejs 'nodejs'   // Make sure NodeJS tool is configured in Jenkins global tools
     }
 
     environment {
-        SONARQUBE_SERVER = 'SonarQubeLocal'
-        SONAR_AUTH_TOKEN = credentials('sonar-token')
+        SONARQUBE_SERVER = 'SonarQubeLocal'         // Update this if your SonarQube server in Jenkins has a different name
+        SONAR_AUTH_TOKEN = credentials('sonar-token') // Uses your secret text
     }
 
     stages {
@@ -50,4 +50,3 @@ pipeline {
         }
     }
 }
-
