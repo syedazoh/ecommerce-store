@@ -2,12 +2,11 @@ pipeline {
     agent any
 
     tools {
-        nodejs 'nodejs'   // Make sure NodeJS tool is configured in Jenkins global tools
+        nodejs 'nodejs'
     }
 
     environment {
-        SONARQUBE_SERVER = 'SonarQubeLocal'         // Update this if your SonarQube server in Jenkins has a different name
-        SONAR_AUTH_TOKEN = credentials('sonar-token') // Uses your secret text
+        SONARQUBE_URL = 'http://sonarqube:9000'  // update if using different host/port
     }
 
     stages {
@@ -27,14 +26,14 @@ pipeline {
 
         stage('SonarQube Analysis') {
             steps {
-                withSonarQubeEnv("${SONARQUBE_SERVER}") {
+                withCredentials([string(credentialsId: 'sonar-token', variable: 'SONAR_TOKEN')]) {
                     dir('backend') {
                         sh """
-                            sonar-scanner \
+                            npx sonar-scanner \
                               -Dsonar.projectKey=ecommerce-store \
                               -Dsonar.sources=. \
-                              -Dsonar.host.url=http://localhost:9000 \
-                              -Dsonar.login=${SONAR_AUTH_TOKEN}
+                              -Dsonar.host.url=$SONARQUBE_URL \
+                              -Dsonar.login=$SONAR_TOKEN
                         """
                     }
                 }
