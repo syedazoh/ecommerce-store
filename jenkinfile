@@ -2,7 +2,8 @@ pipeline {
     agent any
 
     environment {
-        SONAR_AUTH_TOKEN = credentials('SONAR_AUTH_TOKEN')  // Jenkins credentials ID
+        NODEJS_HOME = tool name: 'nodejs', type: 'jenkins.plugins.nodejs.tools.NodeJSInstallation'
+        PATH = "${NODEJS_HOME}/bin:${env.PATH}"
     }
 
     stages {
@@ -15,26 +16,23 @@ pipeline {
 
         stage('Install Dependencies') {
             steps {
-                script {
-                    dir('backend') {
-                        sh 'npm install'
-                    }
+                dir('backend') {
+                    sh 'npm install'
                 }
             }
         }
 
         stage('SonarQube Analysis') {
             steps {
-                script {
-                    withSonarQubeEnv('SonarQubeLocal') {   // must match Jenkins SonarQube config name
-                        def scannerHome = tool 'sonar-scanner'  // must match Global Tool name
+                withCredentials([string(credentialsId: 'sonar_token', variable: 'SONAR_AUTH_TOKEN')]) {
+                    withSonarQubeEnv('SonarQubeLocal') {
                         dir('backend') {
                             sh """
-                                ${scannerHome}/bin/sonar-scanner \
-                                    -Dsonar.projectKey=ecommerce-store \
-                                    -Dsonar.sources=. \
-                                    -Dsonar.host.url=http://localhost:9000 \
-                                    -Dsonar.login=${SONAR_AUTH_TOKEN}
+                                sonar-scanner \
+                                  -Dsonar.projectKey=ecommerce-store \
+                                  -Dsonar.sources=. \
+                                  -Dsonar.host.url=http://localhost:9000 \
+                                  -Dsonar.login=$SONAR_AUTH_TOKEN
                             """
                         }
                     }
@@ -45,7 +43,7 @@ pipeline {
         stage('Build Docker Image') {
             steps {
                 script {
-                    sh 'docker build -t ecommerce-store:latest ./backend'
+                    sh 'docker build -t ecommerce-store:latest .'
                 }
             }
         }
