@@ -2,15 +2,12 @@ pipeline {
     agent any
 
     tools {
-        nodejs 'nodejs'                           // NodeJS tool installed in Jenkins
-        hudson.plugins.sonar.SonarRunnerInstallation 'sonar-scanner'  
-        // ^ must match the name you gave SonarScanner in Global Tool Configuration
+        nodejs 'nodejs'
     }
 
     environment {
-        SONARQUBE_SERVER = 'SonarQubeLocal'       // must match your SonarQube server config
-        SONAR_AUTH_TOKEN = credentials('sonar-token')  
-        // store your token in Jenkins credentials with ID "sonar-token"
+        SONARQUBE_SERVER = 'SonarQubeLocal'
+        SONAR_AUTH_TOKEN = credentials('sonar-token')
     }
 
     stages {
@@ -53,6 +50,3 @@ pipeline {
         }
     }
 }
-
-
-
