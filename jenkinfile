@@ -1,66 +1,14 @@
 pipeline {
-    agent {
-        docker {
-            image 'node:18'   // official Node.js 18 image
-        }
-    }
-
-    environment {
-        SONARQUBE = credentials('sonar-token')
-    }
-pipeline {
     agent any
 
     environment {
-        SONARQUBE = credentials('sonar-token')
+        SONAR_TOKEN = credentials('sonar-token') // Jenkins credential ID
     }
 
     stages {
         stage('Checkout') {
             steps {
-                git branch: 'master', url: 'https://github.com/syedazoh/ecommerce-store.git'
-            }
-        }
-
-        stage('Install Dependencies') {
-            steps {
-                dir('backend') {
-                    // run npm inside a Node Docker container
-                    sh 'docker run --rm -v $PWD:/app -w /app node:18 npm install'
-                }
-            }
-        }
-
-        stage('Run Tests') {
-            steps {
-                dir('backend') {
-                    sh 'docker run --rm -v $PWD:/app -w /app node:18 npm test || echo "No tests found"'
-                }
-            }
-        }
-
-        stage('SonarQube Analysis') {
-            steps {
-                withSonarQubeEnv('SonarQube') {
-                    dir('backend') {
-                        sh "docker run --rm -v $PWD:/app -w /app node:18 sonar-scanner -Dsonar.projectKey=ecommerce-store -Dsonar.sources=. -Dsonar.host.url=http://host.docker.internal:9000 -Dsonar.login=$SONARQUBE"
-                    }
-                }
-            }
-        }
-
-        stage('Build Docker Image') {
-            steps {
-                sh 'docker build -t ecommerce-store .'
-            }
-        }
-    }
-}
-
-    stages {
-        stage('Checkout') {
-            steps {
-                git branch: 'master', url: 'https://github.com/syedazoh/ecommerce-store.git'
+                checkout scm
             }
         }
 
@@ -72,37 +20,34 @@ pipeline {
             }
         }
 
-        stage('Run Tests') {
-            steps {
-                dir('backend') {
-                    sh 'npm test || echo "No tests found"'
-                }
-            }
-        }
-
         stage('SonarQube Analysis') {
             steps {
-                withSonarQubeEnv('SonarQube') {
-                    dir('backend') {
-                        sh "sonar-scanner -Dsonar.projectKey=ecommerce-store -Dsonar.sources=. -Dsonar.host.url=http://host.docker.internal:9000 -Dsonar.login=$SONARQUBE"
-                    }
+                dir('backend') {
+                    sh """
+                        npx sonar-scanner \
+                          -Dsonar.projectKey=ecommerce-store \
+                          -Dsonar.sources=. \
+                          -Dsonar.host.url=http://sonarqube:9000 \
+                          -Dsonar.login=$SONAR_TOKEN
+                    """
                 }
             }
         }
 
-        stage('Build Docker Image') {
+        stage('Build') {
             steps {
-                sh 'docker build -t ecommerce-store .'
+                dir('backend') {
+                    sh 'npm run build || echo "No build script, skipping..."'
+                }
             }
         }
-    }
 
-    post {
-        failure {
-            echo 'Pipeline failed ❌ — check logs'
-        }
-        success {
-            echo 'Pipeline succeeded ✅'
+        stage('Test') {
+            steps {
+                dir('backend') {
+                    sh 'npm test || echo "No tests defined, skipping..."'
+                }
+            }
         }
     }
 }
