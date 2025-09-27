@@ -1,8 +1,12 @@
 pipeline {
-    agent any
+    agent {
+        docker {
+            image 'node:18'   // Node.js LTS image with npm pre-installed
+        }
+    }
 
     environment {
-        SONAR_TOKEN = credentials('sonar-token') // Jenkins credential ID
+        SONAR_TOKEN = credentials('sonar-token')
     }
 
     stages {
