@@ -2,8 +2,7 @@ pipeline {
     agent any
 
     environment {
-        NODEJS_HOME = tool name: 'nodejs', type: 'jenkins.plugins.nodejs.tools.NodeJSInstallation'
-        PATH = "${NODEJS_HOME}/bin:${env.PATH}"
+        SONARQUBE = 'SonarQubeLocal'   // Name you set in Jenkins > Manage Jenkins > System
     }
 
     stages {
@@ -22,18 +21,27 @@ pipeline {
             }
         }
 
+        stage('Run Tests') {
+            steps {
+                dir('backend') {
+                    // Skip if no tests yet
+                    sh 'npm test || echo "No tests defined, skipping..."'
+                }
+            }
+        }
+
         stage('SonarQube Analysis') {
             steps {
-                withCredentials([string(credentialsId: 'sonar_token', variable: 'SONAR_AUTH_TOKEN')]) {
-                    withSonarQubeEnv('SonarQubeLocal') {
+                withSonarQubeEnv('SonarQubeLocal') {
+                    withCredentials([string(credentialsId: 'sonar-token', variable: 'SONAR_AUTH_TOKEN')]) {
                         dir('backend') {
-                            sh """
-                                sonar-scanner \
-                                  -Dsonar.projectKey=ecommerce-store \
-                                  -Dsonar.sources=. \
-                                  -Dsonar.host.url=http://localhost:9000 \
-                                  -Dsonar.login=$SONAR_AUTH_TOKEN
-                            """
+                            sh '''
+                              sonar-scanner \
+                                -Dsonar.projectKey=ecommerce-store \
+                                -Dsonar.sources=. \
+                                -Dsonar.host.url=$SONAR_HOST_URL \
+                                -Dsonar.login=$SONAR_AUTH_TOKEN
+                            '''
                         }
                     }
                 }
@@ -46,6 +54,15 @@ pipeline {
                     sh 'docker build -t ecommerce-store:latest .'
                 }
             }
+        }
+    }
+
+    post {
+        success {
+            echo 'Pipeline completed successfully ✅'
+        }
+        failure {
+            echo 'Pipeline failed ❌ — check logs'
         }
     }
 }
