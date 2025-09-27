@@ -1,41 +1,42 @@
 pipeline {
     agent any
 
-    tools {
-        nodejs 'nodejs'   // Make sure NodeJS tool is configured in Jenkins global tools
-    }
-
     environment {
-        SONARQUBE_SERVER = 'SonarQubeLocal'         // Update this if your SonarQube server in Jenkins has a different name
-        SONAR_AUTH_TOKEN = credentials('sonar-token') // Uses your secret text
+        SONAR_AUTH_TOKEN = credentials('SONAR_AUTH_TOKEN')  // Jenkins credentials ID
     }
 
     stages {
         stage('Checkout') {
             steps {
-                git branch: 'master', url: 'https://github.com/syedazoh/ecommerce-store.git'
+                git branch: 'master',
+                    url: 'https://github.com/syedazoh/ecommerce-store.git'
             }
         }
 
         stage('Install Dependencies') {
             steps {
-                dir('backend') {
-                    sh 'npm install'
+                script {
+                    dir('backend') {
+                        sh 'npm install'
+                    }
                 }
             }
         }
 
         stage('SonarQube Analysis') {
             steps {
-                withSonarQubeEnv("${SONARQUBE_SERVER}") {
-                    dir('backend') {
-                        sh """
-                            sonar-scanner \
-                              -Dsonar.projectKey=ecommerce-store \
-                              -Dsonar.sources=. \
-                              -Dsonar.host.url=http://localhost:9000 \
-                              -Dsonar.login=${SONAR_AUTH_TOKEN}
-                        """
+                script {
+                    withSonarQubeEnv('SonarQubeLocal') {   // must match Jenkins SonarQube config name
+                        def scannerHome = tool 'sonar-scanner'  // must match Global Tool name
+                        dir('backend') {
+                            sh """
+                                ${scannerHome}/bin/sonar-scanner \
+                                    -Dsonar.projectKey=ecommerce-store \
+                                    -Dsonar.sources=. \
+                                    -Dsonar.host.url=http://localhost:9000 \
+                                    -Dsonar.login=${SONAR_AUTH_TOKEN}
+                            """
+                        }
                     }
                 }
             }
@@ -43,8 +44,8 @@ pipeline {
 
         stage('Build Docker Image') {
             steps {
-                dir('backend') {
-                    sh 'docker build -t ecommerce-store-backend:latest .'
+                script {
+                    sh 'docker build -t ecommerce-store:latest ./backend'
                 }
             }
         }
