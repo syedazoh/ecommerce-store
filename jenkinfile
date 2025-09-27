@@ -1,20 +1,18 @@
 pipeline {
-    agent {
-        docker {
-            image 'node:18'    // run everything inside Node.js 18 container
-            args '-u root:root' // allow installing packages
-        }
+    agent any
+
+    tools {
+        nodejs 'Node18'   // Use the NodeJS installation configured in Jenkins
     }
 
     environment {
-        SONAR_TOKEN = credentials('sonar-token') // SonarQube token
+        SONAR_TOKEN = credentials('sonar-token')
     }
 
     stages {
         stage('Checkout') {
             steps {
                 checkout scm
-                echo '✅ Code checked out'
             }
         }
 
@@ -23,7 +21,6 @@ pipeline {
                 dir('backend') {
                     sh 'npm install'
                 }
-                echo '✅ Dependencies installed'
             }
         }
 
@@ -48,11 +45,11 @@ pipeline {
                 withSonarQubeEnv('SonarQube') {
                     dir('backend') {
                         sh '''
-                            npx sonar-scanner \
-                              -Dsonar.projectKey=ecommerce-store \
-                              -Dsonar.sources=. \
-                              -Dsonar.host.url=$SONAR_HOST_URL \
-                              -Dsonar.login=$SONAR_TOKEN
+                          npx sonar-scanner \
+                            -Dsonar.projectKey=ecommerce-store \
+                            -Dsonar.sources=. \
+                            -Dsonar.host.url=$SONAR_HOST_URL \
+                            -Dsonar.login=$SONAR_TOKEN
                         '''
                     }
                 }
