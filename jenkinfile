@@ -1,52 +1,52 @@
 pipeline {
-agent any
+    agent any
 
-```
-environment {
-    NODE_ENV = "production"
-}
-
-stages {
-    stage('Checkout') {
-        steps {
-            git branch: 'main', url: 'https://github.com/syedazoh/ecommerce-store.git'
-        }
+    tools {
+        nodejs 'nodejs'
     }
 
-    stage('Install Dependencies') {
-        steps {
-            dir('backend') {
-                sh 'npm install'
+    environment {
+        SONARQUBE_SERVER = 'SonarQubeLocal'   // Name of your SonarQube server in Jenkins config
+        SONAR_AUTH_TOKEN = credentials('sonar-token') // Must exist in Jenkins credentials
+    }
+
+    stages {
+        stage('Checkout') {
+            steps {
+                git branch: 'master', url: 'https://github.com/syedazoh/ecommerce-store.git'
             }
         }
-    }
 
-    stage('Run Tests') {
-        steps {
-            dir('backend') {
-                sh 'npm test || echo "No tests found, skipping..."'
-            }
-        }
-    }
-
-    stage('SonarQube Analysis') {
-        steps {
-            withSonarQubeEnv('SonarQubeLocal') {
+        stage('Install Dependencies') {
+            steps {
                 dir('backend') {
-                    withCredentials([string(credentialsId: 'squ_ec468f4fd1f03bf653785a8a52fc7c51e538815d', variable: 'SONAR_AUTH_TOKEN')]) {
+                    sh 'npm install'
+                }
+            }
+        }
+
+        stage('SonarQube Analysis') {
+            steps {
+                withSonarQubeEnv("${SONARQUBE_SERVER}") {
+                    dir('backend') {
                         sh """
-                            ${tool 'SonarScanner'}/bin/sonar-scanner \
+                            sonar-scanner \
                               -Dsonar.projectKey=ecommerce-store \
                               -Dsonar.sources=. \
                               -Dsonar.host.url=http://localhost:9000 \
-                              -Dsonar.login=$SONAR_AUTH_TOKEN
+                              -Dsonar.login=${SONAR_AUTH_TOKEN}
                         """
                     }
                 }
             }
         }
-    }
-}
-```
 
+        stage('Build Docker Image') {
+            steps {
+                dir('backend') {
+                    sh 'docker build -t ecommerce-store-backend:latest .'
+                }
+            }
+        }
+    }
 }
