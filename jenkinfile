@@ -1,51 +1,48 @@
 pipeline {
-    agent any
+agent any
 
-    tools {
-        nodejs 'nodejs'
+```
+environment {
+    SONARQUBE_URL = 'http://localhost:9000'  // change if using Docker network
+}
+
+stages {
+    stage('Checkout') {
+        steps {
+            git url: 'https://github.com/syedazoh/ecommerce-store.git', branch: 'master'
+        }
     }
 
-    environment {
-        SONARQUBE_URL = 'http://sonarqube:9000'  // update if using different host/port
-    }
-
-    stages {
-        stage('Checkout') {
-            steps {
-                git branch: 'master', url: 'https://github.com/syedazoh/ecommerce-store.git'
+    stage('Install Dependencies') {
+        steps {
+            dir('backend') {
+                sh 'npm install'
             }
         }
+    }
 
-        stage('Install Dependencies') {
-            steps {
+    stage('SonarQube Analysis') {
+        steps {
+            withCredentials([string(credentialsId: 'squ_ec468f4fd1f03bf653785a8a52fc7c51e538815d', variable: 'SONAR_TOKEN')]) {
                 dir('backend') {
-                    sh 'npm install'
-                }
-            }
-        }
-
-        stage('SonarQube Analysis') {
-            steps {
-                withCredentials([string(credentialsId: 'sonar-token', variable: 'SONAR_TOKEN')]) {
-                    dir('backend') {
-                        sh """
-                            npx sonar-scanner \
-                              -Dsonar.projectKey=ecommerce-store \
-                              -Dsonar.sources=. \
-                              -Dsonar.host.url=$SONARQUBE_URL \
-                              -Dsonar.login=$SONAR_TOKEN
-                        """
-                    }
-                }
-            }
-        }
-
-        stage('Build Docker Image') {
-            steps {
-                dir('backend') {
-                    sh 'docker build -t ecommerce-store-backend:latest .'
+                    sh '''
+                      npx sonar-scanner \
+                        -Dsonar.projectKey=ecommerce-store \
+                        -Dsonar.sources=. \
+                        -Dsonar.host.url=$SONARQUBE_URL \
+                        -Dsonar.login=$SONAR_TOKEN
+                    '''
                 }
             }
         }
     }
+
+    stage('Build Docker Image') {
+        steps {
+            sh 'docker build -t ecommerce-store .'
+        }
+    }
+}
+```
+
 }
