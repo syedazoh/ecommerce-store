@@ -1,15 +1,18 @@
 pipeline {
-    agent any
+    agent {
+        docker {
+            image 'node:18'   // official Node.js 18 image
+        }
+    }
 
     environment {
-        SONARQUBE = 'SonarQubeLocal'   // Name you set in Jenkins > Manage Jenkins > System
+        SONARQUBE = credentials('sonar-token')
     }
 
     stages {
         stage('Checkout') {
             steps {
-                git branch: 'master',
-                    url: 'https://github.com/syedazoh/ecommerce-store.git'
+                git branch: 'master', url: 'https://github.com/syedazoh/ecommerce-store.git'
             }
         }
 
@@ -24,25 +27,16 @@ pipeline {
         stage('Run Tests') {
             steps {
                 dir('backend') {
-                    // Skip if no tests yet
-                    sh 'npm test || echo "No tests defined, skipping..."'
+                    sh 'npm test || echo "No tests found"'
                 }
             }
         }
 
         stage('SonarQube Analysis') {
             steps {
-                withSonarQubeEnv('SonarQubeLocal') {
-                    withCredentials([string(credentialsId: 'sonar-token', variable: 'SONAR_AUTH_TOKEN')]) {
-                        dir('backend') {
-                            sh '''
-                              sonar-scanner \
-                                -Dsonar.projectKey=ecommerce-store \
-                                -Dsonar.sources=. \
-                                -Dsonar.host.url=$SONAR_HOST_URL \
-                                -Dsonar.login=$SONAR_AUTH_TOKEN
-                            '''
-                        }
+                withSonarQubeEnv('SonarQube') {
+                    dir('backend') {
+                        sh "sonar-scanner -Dsonar.projectKey=ecommerce-store -Dsonar.sources=. -Dsonar.host.url=http://host.docker.internal:9000 -Dsonar.login=$SONARQUBE"
                     }
                 }
             }
@@ -50,19 +44,17 @@ pipeline {
 
         stage('Build Docker Image') {
             steps {
-                script {
-                    sh 'docker build -t ecommerce-store:latest .'
-                }
+                sh 'docker build -t ecommerce-store .'
             }
         }
     }
 
     post {
-        success {
-            echo 'Pipeline completed successfully ✅'
-        }
         failure {
             echo 'Pipeline failed ❌ — check logs'
+        }
+        success {
+            echo 'Pipeline succeeded ✅'
         }
     }
 }
